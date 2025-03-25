@@ -6,7 +6,10 @@
 [English](README_en.md) | 简体中文
 
 # OpenManus-WebUI 🙋
-# 近期会对OpenManus-WebUI的进行调整，有想法的大佬欢迎提issue或者在QQ群中交流
+# 近期会对OpenManus-WebUI的进行调整，欢迎有想法的大佬欢迎提issue或者在QQ群中交流。目前已经新增文件预览区折叠、新增多功能卡片、卡片折叠、清空历史对话信息等功能。
+<div align="center">
+    <img src="./assets/v4.jpg">
+</div>
 
 &nbsp;&nbsp;&nbsp;&nbsp;Manus和OpenManus 非常棒，非常优秀的工作，目前OpenManus暂无前端，于是本人花了2小时开发基于Flask框架一个简单的WebUI。 项目实质上是通过flask框架构建一个前端页面，进行OpenManus的调用，并对OpenManus生成的文件进行预览。
 
