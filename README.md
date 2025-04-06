@@ -132,7 +132,7 @@ api_key = "sk-xxxxxxxxxxxxxxxxxx"
 一行命令运行OpenManus-WebUI：
 
 ```bash
-python app.py
+python app_v3.py
 ```
 ## 欢迎大佬提出宝贵的建议和意见，提Issues，会不断进行优化和实现。
 ## 联系与交流
