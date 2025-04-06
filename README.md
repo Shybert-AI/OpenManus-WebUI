@@ -6,7 +6,7 @@
 [English](README_en.md) | 简体中文
 
 # OpenManus-WebUI 🙋
-### 近期会对OpenManus-WebUI的进行调整，欢迎有想法的大佬欢迎提issue或者在QQ群中交流。目前已经新增文件预览区折叠、新增多功能卡片、卡片折叠、清空历史对话信息等功能。
+### 近期会对OpenManus-WebUI的进行调整，欢迎有想法的大佬欢迎提issue或者在QQ群中交流。目前已经新增文件预览区折叠、新增多功能卡片、卡片折叠、清空历史对话信息等功能。将该webui更新到OpenManus0406目录下，输出内容可以自动保存。需要手动刷新才能在导航栏显示。
 <div align="center">
     <img src="./assets/v4.jpg">
 </div>
