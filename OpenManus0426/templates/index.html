@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Viewer</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/default.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <script>hljs.highlightAll();
+                {% set FILE_ICONS = {
+                'directory': '📁',
+                'default': '📄',
+                '.py': '🐍',
+                '.js': '🚀',
+                '.ts': '🟦',
+                '.java': '☕',
+                '.c': '🔧',
+                '.cpp': '🔩',
+                '.cs': 'Ⓜ️',
+                '.go': '🐹',
+                '.rs': '🦀',
+                '.html': '🌐',
+                '.htm': '🌐',
+                '.css': '🎨',
+                '.scss': '🎀',
+                '.less': '🟣',
+                '.md': '📝',
+                '.json': '📦',
+                '.xml': '📜',
+                '.csv': '📊',
+                '.xlsx': '📈',
+                '.xls': '📉',
+                '.doc': '📃',
+                '.docx': '📑',
+                '.ppt': '📽️',
+                '.pptx': '🎞️',
+                '.pdf': '📚',
+                '.png': '🖼️',
+                '.jpg': '🌅',
+                '.jpeg': '🌄',
+                '.gif': '🎆',
+                '.mp4': '🎥',
+                '.mp3': '🎵',
+                '.exe': '⚙️',
+                '.bat': '🖥️',
+                '.sh': '📟',
+                '.zip': '🗜️',
+                '.rar': '🎒',
+                '.tar': '📦',
+                '.gz': '⛑️',
+                '.yml': '⚙️',
+                '.yaml': '⚙️',
+                '.toml': '⚙️',
+                '.ini': '⚙️',
+                '.sql': '🗃️',
+                '.log': '📰',
+                '.lock': '🔒'
+            } %};
+
+    </script>
+    <script>
+
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // 聊天功能
+            const chatInput = document.querySelector('.chat-input input');
+            const chatMessages = document.querySelector('.chat-messages');
+
+            // 新增清空聊天记录函数
+            window.clearChatHistory = () => {
+                const chatBox = document.querySelector('.chat-messages');
+                // 清空聊天容器
+                chatBox.innerHTML = '';
+                // 可选：发送清空记录请求到后端
+                // fetch('/api/clear-history', { method: 'POST' });
+            };
+
+            // 修改后的消息发送函数
+            window.sendMessage = async () => {
+                const input = document.getElementById('message-input');
+                const message = input.value.trim();
+                if (!message) return;
+
+                // 添加用户消息
+                const chatBox = document.querySelector('.chat-messages');
+                chatBox.innerHTML += `
+                    <div class="message user">
+                        <img src="/static/user-avatar.png" class="avatar">
+                        <div class="content">${message}</div>
+                    </div>
+                `;
+
+                // 添加机器人消息容器
+                const botMessageDiv = document.createElement('div');
+                botMessageDiv.className = 'message ai';
+                botMessageDiv.innerHTML = `
+                    <img src="/static/robot-avatar.png" class="avatar">
+                    <div class="content" id="bot-response"></div>
+                `;
+                chatBox.appendChild(botMessageDiv);
+
+                // 滚动到底部
+                chatBox.scrollTop = chatBox.scrollTop + 1000;
+
+                try {
+                    const response = await fetch('/api/chat-stream', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ message: message })
+                    });
+
+                    const reader = response.body.getReader();
+                    const decoder = new TextDecoder();
+                    let responseContent = '';
+
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+
+                        const chunk = decoder.decode(value);
+                        responseContent += chunk;
+
+                        // 更新显示内容
+                        document.getElementById('bot-response').innerHTML =
+                            responseContent.replace(/\n/g, '<br>');
+
+                        // 自动滚动
+                        chatBox.scrollTop = chatBox.scrollHeight;
+                    }
+
+                    input.value = '';
+                } catch (error) {
+                    console.error('发送消息失败:', error);
+                    document.getElementById('bot-response').innerHTML =
+                        '请求失败，请稍后重试';
+                }
+            }
+
+
+            // 初始化
+            loadFileTree();
+
+            // 绑定回车事件
+            chatInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') sendMessage();
+            });
+        });
+
+        function toggleButton(btn) {
+            // 切换激活状态（true/false）
+            const newState = btn.dataset.active !== 'true';
+            btn.dataset.active = newState;
+            btn.classList.toggle('active', newState);
+
+            // 根据按钮ID执行对应操作
+            switch(btn.id) {
+                case 'thinkToggle':
+                    handleThinking(newState);
+                    break;
+                case 'searchToggle':
+                    handleSearch(newState);
+                    break;
+            }
+        }
+
+        // 状态处理示例函数
+        function handleThinking(isActive) {
+            console.log(`深度思考模式 ${isActive ? '已启用' : '已关闭'}`);
+            // 这里添加实际业务逻辑
+            if(isActive) {
+                // 开启深度思考功能
+            } else {
+                // 关闭深度思考功能
+            }
+        }
+
+        function handleSearch(isActive) {
+            console.log(`联网搜索 ${isActive ? '已启用' : '已关闭'}`);
+            // 这里添加实际业务逻辑
+            if(isActive) {
+                // 开启网络搜索功能
+            } else {
+                // 关闭网络搜索功能
+            }
+        }
+
+    </script>
+
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            height: 100vh;
+            margin: 0;
+        }
+
+<!--        /* 左侧资源管理器 */-->
+<!--        .sidebar {-->
+<!--            width: 280px;-->
+<!--            background: #4ecdc4;-->
+<!--            border-right: 1px solid #dee2e6;-->
+<!--            padding: 20px;-->
+<!--            overflow-y: auto;-->
+<!--            position: relative;   /* 为绝对定位子元素提供基准 */-->
+<!--        }-->
+
+        .sidebar {
+            width: 280px;
+            background: #4ecdc4;
+            border-right: 1px solid #dee2e6;
+            padding: 20px;
+            height: 100vh; /* 新增：占满整个视口高度 */
+            display: flex; /* 新增：启用flex布局 */
+            flex-direction: column; /* 新增：垂直排列子元素 */
+            position: relative;
+        }
+
+        #sidebar {
+            width: 250px;
+            background-color: #f4f4f4;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        #sidebar ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        #sidebar ul li {
+            margin: 5px 0;
+        }
+        #sidebar ul li a {
+            text-decoration: none;
+            color: #333;
+        }
+        #content {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        .custom-list {
+            list-style: none;
+            width: 260px;
+            padding: 0;
+            margin: 0;
+            flex: 1; /* 占据剩余空间 */
+            overflow-y: auto; /* 单独滚动区域 */
+            padding-bottom: 20px; /* 避免内容紧贴底部 */
+        }
+        .custom-list li {
+            margin: 8px 0;
+            padding: 5px;
+            background: #f5f5f5;
+            border-radius: 4px;
+        }
+        .custom-list a {
+            text-decoration: none;
+            color: #2c3e50;
+            display: block;
+        }
+        .custom-list a:hover {
+            color: #3498db;
+            background: #f0f8ff;
+        }
+
+        .header {
+        text-align: center;
+        margin-bottom: 10px;
+        padding: 6px 0 10px;
+        background: linear-gradient(45deg, #ff6b6b, #4ecdc4); /* 双色对角线渐变 */
+        }
+
+    /* 右侧对话区 */
+    .chat-panel {
+        width: 600px;
+        height: calc(101.7vh - 70px);
+        background: white;
+        border-left: 1px solid #dee2e6;
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* 当工作区折叠时调整对话区 */
+    .workspace.collapsed + .chat-panel {
+        flex: 1;
+    }
+
+    .chat-messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 20px;
+        background: white;
+    }
+
+    .message {
+        display: flex;
+        gap: 15px;
+        margin-bottom: 20px;
+    }
+
+    .message.user {
+        flex-direction: row-reverse;
+    }
+
+    .avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        flex-shrink: 0;
+    }
+
+    .content {
+        max-width: 80%;
+        padding: 12px 16px;
+        border-radius: 12px;
+        line-height: 1.5;
+    }
+
+    .user .content {
+        background: #007bff;
+        color: white;
+        border-radius: 12px 12px 0 12px;
+    }
+
+    .ai .content {
+        background: #e9ecef;
+        color: #212529;
+        border-radius: 12px 12px 12px 0;
+    }
+
+
+    #message-input {
+        flex: 1;
+        padding: 12px;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+    }
+
+    .chat-header {
+        padding: 20px;
+        border-bottom: 1px solid #dee2e6;
+    }
+
+    .content {
+        max-width: 80%;
+        padding: 10px 15px;
+        border-radius: 12px;
+    }
+
+
+    .chat-input {
+        padding: 15px;
+        border-top: 1px solid #dee2e6;
+        display: flex;
+        gap: 10px;
+    }
+
+    .chat-input input {
+        flex: 1;
+        padding: 8px;
+        border: 1px solid #dee2e6;
+        border-radius: 5px;
+    }
+
+
+    .send-btn-clear{
+      /* 基础样式 */
+      display: inline-block;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 25px;  /* 控制圆角程度 */
+      background-color: #e0e0e0;
+      color: white;
+      font-size: 16px;
+      font-family: 'Arial', sans-serif;
+      cursor: pointer;
+      transition: all 0.3s ease;
+
+      /* 阴影效果 */
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .send-btn {
+      /* 基础样式 */
+      display: inline-block;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 25px;  /* 控制圆角程度 */
+      background-color: #4CAF50;
+      color: white;
+      font-size: 16px;
+      font-family: 'Arial', sans-serif;
+      cursor: pointer;
+      transition: all 0.3s ease;
+
+      /* 阴影效果 */
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    /* 悬停效果 */
+    .send-btn:hover {
+      background-color: #45a049;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    /* 点击效果 */
+    .send-btn:active {
+      transform: translateY(1px);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    /* 禁用状态 */
+    .send-btn:disabled {
+      background-color: #cccccc;
+      cursor: not-allowed;
+      opacity: 0.7;
+    }
+    /* 中间工作区 */
+    .workspace {
+        flex: 1;
+        background: white;
+    }
+
+    /* 折叠状态 */
+    .workspace.collapsed {
+        flex: 0;
+        min-width: 0;
+        overflow: hidden;
+    }
+
+    .code-editor {
+        width: 90%;
+        height: calc(92vh - 70px);
+        padding: 15px;
+        border: 1px solid #dee2e6;
+        border-radius: 5px;
+        font-family: 'Consolas', monospace;
+        font-size: 14px;
+        resize: none;
+    }
+
+
+    /* 新增样式 */
+    .action-buttons {
+        display: flex;
+        gap: 8px;
+        margin-left: 10px;
+    }
+
+    .clear-btn {
+        width: 40px;
+        height: 40px;
+        padding: 8px;
+        border: none;
+        border-radius: 50%;
+        background: #ffebee;
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .clear-btn:hover {
+        background: #ffcdd2;
+        transform: scale(1.1);
+    }
+
+    .clear-btn:active {
+        transform: scale(0.9);
+    }
+
+    .trash-icon {
+        width: 24px;
+        height: 24px;
+        fill: #c62828;
+        transition: fill 0.3s;
+    }
+
+    .clear-btn:hover .trash-icon {
+        fill: #b71c1c;
+    }
+
+
+        /* 卡片容器样式 */
+        .prompt-container {
+            padding: 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #eee;
+            transition: all 0.3s ease;
+        }
+
+        .prompt-header {
+            margin-bottom: 15px;
+            position: relative;
+        }
+
+        .prompt-header h2 {
+            margin: 0 0 8px 0;
+            color: #2c3e50;
+            display: inline-block;
+        }
+
+        .toggle-cards {
+            align-self: flex-end;  /* 右侧对齐 */
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            background: #e9ecef;
+            border: 1px solid #dee2e6;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 10px;
+        }
+
+        .prompt-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 15px;
+            max-height: 400px;
+            overflow-y: auto;
+            transition: all 0.3s ease;
+        }
+
+        /* 卡片样式 */
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid #eee;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .card i {
+            font-size: 1.5em;
+            color: #4CAF50;
+            flex-shrink: 0;
+        }
+
+        .card-content {
+            line-height: 1.4;
+        }
+
+        /* 折叠状态 */
+        .collapsed .prompt-cards {
+            max-height: 0;
+            overflow: hidden;
+            padding: 0;
+            opacity: 0;
+        }
+
+        .collapsed .toggle-cards i {
+            transform: rotate(180deg);
+        }
+
+        /* 隐藏状态 */
+        .hidden {
+            display: none !important;
+        }
+
+        /* 折叠按钮样式 */
+        .toggle-btn {
+            padding: 10px;
+            background: #e0e0e0;
+            border: none;
+            cursor: pointer;
+            text-align: left;
+        }
+
+<!--        /* 设置按钮区域 */-->
+<!--        .settings-container {-->
+<!--            margin-top: auto;-->
+<!--            padding: 15px;-->
+<!--            position: relative;-->
+<!--            border-top: 1px solid #eee;-->
+<!--        }-->
+
+
+
+        /* 设置容器样式 */
+        .settings-container {
+            margin-top: auto; /* 关键属性：自动填充顶部空间 */
+        <!--    padding: 15px 0;-->
+            background: inherit; /* 继承侧边栏背景色 */
+            position: sticky;
+            bottom: 10;
+            z-index: 100;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1); /* 顶部阴影分隔线 */
+            margin-bottom: 20px;
+        }
+
+        #settingsBtn {
+            width: 100%;
+            padding: 12px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        #settingsBtn:hover {
+            background: #45a049;
+        }
+
+        /* 设置菜单 */
+        .settings-menu {
+            position: absolute;
+            bottom: 60px;
+            left: 15px;
+            right: 15px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            padding: 10px 0;
+            display: none;
+            z-index: 1000;
+        }
+
+        .menu-item {
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .menu-item:hover {
+            background: #f8f9fa;
+        }
+
+        /* 切换开关样式 */
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 24px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-switch label {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .toggle-switch label:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 2px;
+            bottom: 2px;
+            background: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        .toggle-switch input:checked + label {
+            background: #4CAF50;
+        }
+
+        .toggle-switch input:checked + label:before {
+            transform: translateX(16px);
+        }
+
+        /* 模态框样式 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            width: 400px;
+            position: relative;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            cursor: pointer;
+            font-size: 24px;
+            color: #666;
+        }
+
+        .modal-close:hover {
+            color: #333;
+        }
+
+
+        /* 新增样式 */
+        .textarea-container {
+            position: relative;
+            width: 100%;
+        }
+
+        .textarea-buttons {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            display: flex;
+            gap: 8px;
+            pointer-events: none; /* 允许穿透点击 */
+        }
+
+        /* 更新后的样式 */
+        .inner-btn {
+            /* 基础样式 */
+            pointer-events: auto;
+            padding: 6px 15px 6px 10px;
+            border: none;
+            border-radius: 15px;
+            font-size: 0.8em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+
+            /* 默认状态 */
+            background: #e0e0e0 !important;
+            color: #9e9e9e;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-icon {
+            width: 18px;
+            height: 18px;
+            fill: currentColor;
+        }
+
+        /* 激活状态 */
+        .inner-btn.active {
+            opacity: 1;
+            transform: translateY(-1px);
+            box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+        }
+
+        .think.active {
+            background: #4CAF50 !important;
+            color: white;
+        }
+
+        .search.active {
+            background: #2196F3 !important;
+            color: white;
+        }
+
+        /* 禁用状态 */
+        .inner-btn:disabled {
+            background: #f5f5f5 !important;
+            color: #bdbdbd;
+            cursor: not-allowed;
+        }
+
+        /* 调整输入框防止文字被遮挡 */
+        #message-input {
+            padding-bottom: 40px;
+            width: 100%;
+            box-sizing: border-box;
+            min-height: 100px;
+            resize: vertical;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="sidebar" id="sidebar">
+        <header class="header">
+            <h4>OpenManusX</h4>
+        </header>
+
+        <button class="toggle-btn" id="toggleWorkspace">◀ 折叠文件预览区</button>
+<!--        <ul>-->
+<!--            {% for file in files %}-->
+<!--            <li><a href="/file/{{ file }}">{{ file }}</a></li>-->
+<!--            {% endfor %}-->
+<!--        </ul>-->
+           <ul class="custom-list">
+                {% for file in files %}
+                {% set extension = file.split('.')[-1].lower() %}
+                {% set icon = FILE_ICONS['.' + extension] if '.' + extension in FILE_ICONS else FILE_ICONS['default'] %}
+                <li><a href="/file/{{ file }}" >{{ icon }} {{ file }}</a></li>
+                {% endfor %}
+            </ul>
+
+        <!-- 设置按钮 -->
+        <div class="settings-container">
+            <button id="settingsBtn">⚙️ 系统设置</button>
+            <div class="settings-menu">
+                <div class="menu-item" onclick="showAboutModal()">
+                    关于我们
+                </div>
+                <div class="menu-item">
+                    显示推理过程
+                    <div class="toggle-switch">
+                        <input type="checkbox" id="reasoning-toggle">
+                        <label for="reasoning-toggle"></label>
+                    </div>
+                </div>
+                <div class="menu-item">
+                    清空历史记录
+                    <div class="toggle-switch">
+                        <input type="checkbox" id="clear-history-toggle">
+                        <label for="clear-history-toggle"></label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+            <!-- 中间工作区 -->
+    <div class="workspace" id="workspace">
+        <div   class="code-editor"  id="content">
+            <header class="header">
+                    <h4>OpenManusX文件预览区及保存区！</h4>
+                </header>
+            <iframe id="file-preview"></iframe>
+        </div>
+    </div>
+
+
+    <!-- 右侧对话区 -->
+    <div class="chat-panel">
+            <div class="chat-header">
+<!--                <header class="header">-->
+<!--                    <h4>deepseek R1满血版</h4>-->
+<!--                </header>-->
+<!--                <div class="editor-header">-->
+<!--                    <div class="tab active"> 🟢 已连接</div>-->
+<!--                </div>-->
+
+                <div class="header">
+                    <p>搭载deepseek R1满血版的多功能智能代理，可以帮助您解决各种任务</p>
+                </div>
+
+            </div>
+
+            <div class="prompt-container">
+<!--                <div class="prompt-header">-->
+<!--                    <h2>OpenManus Web</h2>-->
+<!--                    <button class="toggle-cards" onclick="toggleCards()">-->
+<!--                        <i class="fas fa-chevron-down"></i>-->
+<!--                    </button>-->
+<!--                    <p>多功能智能代理，可以帮助您解决各种任务</p>-->
+<!--                    <p class="tip">您可以尝试：</p>-->
+<!--                </div>-->
+                <button class="toggle-cards" onclick="toggleCards()">
+                        <i class="fas fa-chevron-down"></i>多功能卡片折叠
+                </button>
+                <div class="prompt-cards">
+                    <div class="card">
+                        <i class="fas fa-spider"></i>
+                        <div class="card-content">帮我写一个Python爬虫，抓取豆瓣Top250电影</div>
+                    </div>
+                    <div class="card">
+                        <i class="fas fa-gamepad"></i>
+                        <div class="card-content">用Python编写一个简单的贪吃蛇游戏</div>
+                    </div>
+                    <div class="card">
+                        <i class="fas fa-brain"></i>
+                        <div class="card-content">分析最近人工智能发展趋势</div>
+                    </div>
+                    <div class="card">
+                        <i class="fas fa-database"></i>
+                        <div class="card-content">如何使用Python处理大规模数据？</div>
+                    </div>
+<!--                    https://fa6.dashgame.com/-->
+                    <div class="card">
+                        <i class="fa-solid fa-file-signature"></i>
+                        <div class="card-content">推荐适合机器学习的GPU配置方案</div>
+                    </div>
+
+                    <div class="card">
+                        <i class="fa-sharp fa-solid fa-desktop "></i>
+                        <div class="card-content">如何用Flask部署深度学习模型？</div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- 前端修改 -->
+            <div class="chat-messages">
+                <div class="message ai">
+                    <img src="/static/robot-avatar.png" class="avatar">
+                    <div class="content">您好！我是AI助手，需要什么帮助？</div>
+                </div>
+            </div>
+            <div class="chat-input">
+<!--                <input type="text" id="message-input" placeholder="输入消息...">-->
+
+<!--                <textarea id="message-input"  name="message" placeholder="输入您的问题..."></textarea>-->
+<!--                <button class="send-btn" onclick="sendMessage()">发送</button>-->
+                <div class="textarea-container">
+                    <textarea id="message-input" name="message" placeholder="输入您的问题..."></textarea>
+                    <!-- 浮动按钮容器 -->
+                    <div class="textarea-buttons">
+                        <button class="inner-btn think" onclick="toggleButton(this)" data-active="false">
+                            <svg class="btn-icon" viewBox="0 0 24 24">
+                                <path d="M12 6v3l4-4-4-4v3c-4.42 0-8 3.58-8 8 0 1.57.46 3.03 1.24 4.26L6.7 14.8c-.45-.83-.7-1.79-.7-2.8 0-3.31 2.69-6 6-6zm6.76 1.74L17.3 9.2c.44.84.7 1.79.7 2.8 0 3.31-2.69 6-6 6v-3l-4 4 4 4v-3c4.42 0 8-3.58 8-8 0-1.57-.46-3.03-1.24-4.26z"/>
+                            </svg>
+                            深度思考
+                        </button>
+                        <button class="inner-btn search" onclick="toggleButton(this)" data-active="false">
+                            <svg class="btn-icon" viewBox="0 0 24 24">
+                                <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+                            </svg>
+                            联网搜索
+                        </button>
+                    </div>
+                </div>
+                <div class="action-buttons">
+                    <button class="send-btn-clear" onclick="clearChatHistory()" title="清空聊天记录">清空
+<!--                        &lt;!&ndash; 垃圾桶图标 &ndash;&gt;-->
+<!--                        <svg class="trash-icon" viewBox="0 0 24 24">-->
+<!--                            <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>-->
+<!--                        </svg>-->
+                    </button>
+                    <button class="send-btn" onclick="sendMessage()">发送</button>
+                </div>
+            </div>
+    </div>
+
+    <!-- 关于我们模态框 -->
+    <div class="modal-overlay" id="aboutModal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeModal()">×</span>
+            <h2>关于 OpenManusX</h2>
+            <p>版本: 1.2.0</p>
+            <p>开发者: AI技术团队</p>
+            <p>联系方式: 854197093@qq.com</p>
+            <p>QQ交流群: 1029629549</p>
+            <p>© 2024 OpenManusX. 版权所有</p>
+        </div>
+    </div>
+
+    <script>
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // 初始化状态
+            const toggleBtn = document.getElementById('toggleWorkspace');
+            const workspace = document.getElementById('workspace');
+
+            // 设置默认折叠状态
+            let isCollapsed = true; // 初始状态设为折叠
+            workspace.classList.add('collapsed');
+            toggleBtn.textContent = '▶ 展开文件预览区';
+
+            // 绑定切换事件
+            toggleBtn.addEventListener('click', () => {
+                isCollapsed = !isCollapsed;
+                workspace.classList.toggle('collapsed', isCollapsed);
+                toggleBtn.textContent = isCollapsed
+                    ? '▶ 展开文件预览区'
+                    : '◀ 折叠文件预览区';
+            });
+
+            // 文件点击事件
+            document.querySelectorAll('#sidebar a').forEach(link => {
+                link.addEventListener('click', function(event) {
+                    event.preventDefault();
+                    // 如果折叠则自动展开
+                    if (isCollapsed) {
+                        workspace.classList.remove('collapsed');
+                        isCollapsed = false;
+                        toggleBtn.textContent = '◀ 折叠文件预览区';
+                    }
+                    // 加载文件预览
+                    document.getElementById('file-preview').src = this.href;
+                });
+            });
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // 卡片点击处理
+            document.querySelectorAll('.card').forEach(card => {
+                card.addEventListener('click', () => {
+                    const input = document.getElementById('message-input');
+                    input.value = card.querySelector('.card-content').textContent;
+                    input.focus();
+                });
+            });
+        });
+
+        // 折叠/展开卡片
+        function toggleCards() {
+            const container = document.querySelector('.prompt-container');
+            container.classList.toggle('collapsed');
+        }
+
+
+        // 设置菜单控制
+        const settingsBtn = document.getElementById('settingsBtn');
+        const settingsMenu = document.querySelector('.settings-menu');
+
+        settingsBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            settingsMenu.style.display =
+                settingsMenu.style.display === 'block' ? 'none' : 'block';
+        });
+
+        // 点击外部关闭菜单
+        document.addEventListener('click', () => {
+            settingsMenu.style.display = 'none';
+        });
+
+        // 清空历史记录开关
+        document.getElementById('clear-history-toggle').addEventListener('change', (e) => {
+            if(e.target.checked) {
+                if(confirm("确定要清空所有历史记录吗？")) {
+                    document.querySelector('.file-list').innerHTML = '';
+                }
+                e.target.checked = false; // 重置开关状态
+            }
+        });
+
+        // 模态框控制
+        function showAboutModal() {
+            document.getElementById('aboutModal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('aboutModal').style.display = 'none';
+        }
+
+        // 点击模态框外部关闭
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal-overlay')) {
+                closeModal();
+            }
+        }
+
+
+    </script>
+</body>
+</html>
